@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moobit | Habit & Mood Tracker</title>
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <!-- Include Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            max-width: 1580px; 
+            margin: 0 auto;
+            padding: 24px;
+        }
+        h1 { text-align: center; color: var(--primary); font-size: 2.75rem; margin-bottom: 5px; }
+        p.subtitle { text-align: center; color: #64748b; margin-top: 0; margin-bottom: 30px; font-size: 1.05rem; }
+        
+        .card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 22px;
+        }
+        .form-group { margin-bottom: 14px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.95rem; }
+        input[type="date"], input[type="text"], select, textarea {
+            width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem;
+        }
+        
+        .habits-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+        }
+        .habits-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px;
+        }
+        .habit-item {
+            display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 8px 10px; border-radius: 6px;
+        }
+        .habit-item label { margin: 0; font-weight: normal; flex-grow: 1; cursor: pointer; font-size: 0.9rem; }
+        
+        button.del-habit-btn {
+            background: none; color: #ef4444; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 5px; font-weight: bold; line-height: 1;
+        }
+        button.del-habit-btn:hover { color: #b91c1c; }
+
+        .add-habit-wrapper {
+            display: flex; gap: 8px; margin-bottom: 14px;
+        }
+        .add-habit-wrapper input { flex-grow: 1; padding: 10px; }
+        
+        button.secondary-btn {
+            background-color: #64748b; color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold; white-space: nowrap;
+        }
+        button.secondary-btn:hover { background-color: #475569; }
+
+        button.primary-btn {
+            background-color: var(--primary); color: white; border: none; padding: 12px 20px;
+            border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold;
+        }
+        button.primary-btn:hover { background-color: #4338ca; }
+        
+        button.delete-btn {
+            background-color: #ef4444; color: white; border: none; padding: 6px 10px;
+            border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;
+        }
+        button.delete-btn:hover { background-color: #dc2626; }
+        
+        button.dropdown-btn {
+            background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; 
+            padding: 10px 15px; border-radius: 6px; cursor: pointer; 
+            font-size: 0.95rem; font-weight: bold; width: 100%; transition: all 0.2s;
+        }
+        button.dropdown-btn:hover { background-color: #e2e8f0; color: #1e293b; }
+
+        .month-selector-dropdown {
+            width: auto;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--primary);
+            background-color: #e0e7ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .sidebar-month-container { text-align: center; margin-bottom: 18px; }
+        .sidebar-month-container .month-selector-dropdown { width: 100%; }
+
+        .log-header-container {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 14px;
+        }
+        .log-header-container h3 { margin: 0; font-size: 1.2rem; }
+
+        .dashboard-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        @media(min-width: 1300px) {
+            .dashboard-layout {
+                display: grid;
+                grid-template-columns: 330px 1fr 260px 240px;
+                gap: 22px;
+                align-items: flex-start;
+            }
+            .sidebar-left, .sidebar-right, .sidebar-far-right {
+                position: sticky;
+                top: 24px;
+                max-height: calc(100vh - 48px);
+                overflow-y: auto;
+                padding-right: 2px;
+            }
+            .sidebar-left::-webkit-scrollbar, .sidebar-right::-webkit-scrollbar, .sidebar-far-right::-webkit-scrollbar { width: 5px; }
+            .sidebar-left::-webkit-scrollbar-thumb, .sidebar-right::-webkit-scrollbar-thumb, .sidebar-far-right::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        }
+
+        .charts-stack { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 18px; 
+        }
+        
+        .chart-micro-box {
+            background: #f8fafc; 
+            padding: 14px; 
+            border: 1px solid #e2e8f0;
+            border-radius: 8px; 
+            height: 245px; 
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .chart-micro-box h4 { 
+            margin: 0 0 10px 0; 
+            width: 100%;
+            font-size: 0.9rem; 
+            color: #475569; 
+            text-align: center; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+        
+        .chart-canvas-container {
+            position: relative;
+            width: 100%;
+            flex-grow: 1; 
+            min-height: 0;
+        }
+
+        .main-workspace { display: flex; flex-direction: column; gap: 22px; }
+        
+        .summary-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; text-align: center; }
+        .stat-box { background: #e0e7ff; padding: 18px; border-radius: 8px; border: 1px solid #c7d2fe; }
+        .stat-box h3 { margin: 0; color: var(--primary); font-size: 2rem; }
+        .stat-box p { margin: 5px 0 0 0; font-size: 0.9rem; font-weight: bold; color: #4f46e5; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #f1f5f9; font-weight: bold; color: #475569; font-size: 0.95rem; }
+        td { font-size: 0.95rem; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-top: 12px;
+        }
+        .calendar-day-header {
+            text-align: center; font-weight: bold; font-size: 0.8rem;
+            color: #64748b; padding-bottom: 4px;
+        }
+        .calendar-day {
+            aspect-ratio: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #f1f5f9; border-radius: 6px; font-size: 0.85rem;
+            position: relative; color: #334155;
+        }
+        .calendar-day.logged {
+            background: #e0e7ff; color: var(--primary);
+            font-weight: bold; border: 1px solid #c7d2fe;
+        }
+        .calendar-day.logged::after {
+            content: '✔'; color: #10b981; font-size: 0.7rem;
+            position: absolute; bottom: 2px; right: 4px;
+        }
+        .calendar-day.empty { background: transparent; }
+
+        .heatmap-scroll-container {
+            display: block;
+            padding-right: 4px; 
+            max-height: 410px; 
+            overflow-y: auto; 
+            width: 100%;
+        }
+        
+        .heatmap-scroll-container::-webkit-scrollbar { width: 5px; }
+        .heatmap-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 5px; 
+            margin-top: 8px;
+            width: 100%;
+        }
+        
+        .heatmap-cell {
+            width: 100%; 
+            aspect-ratio: 1; 
+            background-color: #f1f5f9;
+            border-radius: 5px; 
+            cursor: default;
+        }
+
+        .heatmap-cell.empty {
+            background: transparent;
+            pointer-events: none; 
+        }
+        
+        .heatmap-cell[data-mood="1"] { background-color: #ef4444; } 
+        .heatmap-cell[data-mood="2"] { background-color: #f59e0b; } 
+        .heatmap-cell[data-mood="3"] { background-color: #94a3b8; } 
+        .heatmap-cell[data-mood="4"] { background-color: #60a5fa; } 
+        .heatmap-cell[data-mood="5"] { background-color: #10b981; } 
+
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0;
+            margin-bottom: 14px;
+        }
+        .heatmap-legend .heatmap-cell { width: 12px; height: 12px; border-radius: 3px; aspect-ratio: unset; }
+    </style>
+</head>
+<body>
+
+    <h1>Moobit 🌒</h1>
+    <p class="subtitle">Track your daily habits and monthly mood</p>
+
+    <div class="dashboard-layout">
+        
+        <!-- COLUMN 1: Stationary Visualizations (FAR LEFT) -->
+        <aside class="sidebar-left">
+            <div class="card" style="margin-bottom: 0;">
+                <h3 style="margin-top:0; margin-bottom:14px; text-align: center; color: var(--primary); font-size: 1.2rem;">Visual Trends</h3>
+                
+                <div class="sidebar-month-container">
+                    <select id="chartMonthSelector" class="month-selector-dropdown" onchange="syncMonths('chart')"></select>
+                </div>
+
+                <div class="charts-stack">
+                    <div class="chart-micro-box">
+                        <h4>Mood Line</h4>
+                        <div class="chart-canvas-container">
+                            <canvas id="moodLineChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-micro-box">
+                        <h4>Habits Status</h4>
+                        <div class="chart-canvas-container">
+                            <canvas id="habitBarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-micro-box">
+                        <h4>Mood Breakdown</h4>
+                        <div class="chart-canvas-container">
+                            <canvas id="moodCircleChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- COLUMN 2: Data Entry & Historical Log System (CENTER-LEFT) -->
+        <main class="main-workspace">
+            
+            <div class="card" style="margin-top: 0;">
+                <h3 style="margin-top:0; margin-bottom:14px; color: var(--primary); font-size: 1.2rem;">Today's Entry</h3>
+                <form id="moobitForm">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mood">Overall Mood</label>
+                            <select id="mood" required>
+                                <option value="5">😁 Excellent</option>
+                                <option value="4">🙂 Good</option>
+                                <option value="3">😐 Okay</option>
+                                <option value="2">😔 Rough</option>
+                                <option value="1">😫 Terrible</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="habits-header">
+                            <label style="margin: 0;">Habits Completed</label>
+                        </div>
+                        <div class="habits-grid" id="habitsGrid">
+                            <!-- Injected checkboxes -->
+                        </div>
+                        <div class="add-habit-wrapper">
+                            <input type="text" id="newHabitInput" placeholder="New track habit...">
+                            <button type="button" class="secondary-btn" onclick="addCustomHabit()">+ Add</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Quick Note</label>
+                        <textarea id="notes" rows="2" placeholder="Briefly describe your day..."></textarea>
+                    </div>
+
+                    <button type="submit" class="primary-btn">Save Entry</button>
+                </form>
+            </div>
+
+            <!-- Detailed Log Table Records -->
+            <div class="card">
+                <div class="log-header-container">
+                    <h3>History Log Records</h3>
+                    <select id="monthSelector" class="month-selector-dropdown" onchange="syncMonths('log')"></select>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Mood</th>
+                                <th>Habits</th>
+                                <th>Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entriesTableBody">
+                            <!-- LocalStorage Row Data output -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="expandLogsContainer" style="margin-top: 14px; display: none;">
+                    <button id="expandLogsBtn" class="dropdown-btn" onclick="toggleLogs()">Show More Records ▼</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- COLUMN 3: Calendar & Highlights (CENTER-RIGHT) -->
+        <aside class="sidebar-right">
+            <!-- Calendar Card -->
+            <div class="card" style="margin-top: 0;">
+                <h3 style="margin-top:0; margin-bottom:14px; text-align: center; color: var(--primary); font-size: 1.2rem;">Activity Tracker</h3>
+                
+                <div class="sidebar-month-container">
+                    <select id="calendarMonthSelector" class="month-selector-dropdown" onchange="syncMonths('calendar')"></select>
+                </div>
+                
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Javascript generates calendar here -->
+                </div>
+            </div>
+
+            <!-- Statistical Summary Boxes -->
+            <div class="card">
+                <h3 style="margin-top:0; margin-bottom:14px; text-align:center; font-size: 1.2rem;">Highlights (<span id="currentMonthLabel"></span>)</h3>
+                <div class="summary-stats">
+                    <div class="stat-box">
+                        <h3 id="avgMoodStat">-</h3>
+                        <p>Average Mood</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="totalDaysStat">0</h3>
+                        <p>Days Logged</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- COLUMN 4: Vertical Yearly Heatmap (FAR RIGHT) -->
+        <aside class="sidebar-far-right">
+            <!-- Yearly Heatmap Container -->
+            <div class="card" style="margin-top: 0;">
+                <h3 style="margin-top: 0; margin-bottom: 5px; text-align: center; color: var(--primary); font-size: 1.2rem;">Yearly Heatmap</h3>
+                <h4 id="heatmapYearLabel" style="margin: 0; text-align: center; color: #64748b; margin-bottom: 14px; font-size: 0.95rem;"></h4>
+                
+                <!-- Legend placed ABOVE grid -->
+                <div class="heatmap-legend">
+                    <span>Low</span>
+                    <div class="heatmap-cell" data-mood="1"></div>
+                    <div class="heatmap-cell" data-mood="2"></div>
+                    <div class="heatmap-cell" data-mood="3"></div>
+                    <div class="heatmap-cell" data-mood="4"></div>
+                    <div class="heatmap-cell" data-mood="5"></div>
+                    <span>High</span>
+                </div>
+                
+                <div class="heatmap-scroll-container">
+                    <div class="heatmap-grid" id="heatmapGrid"></div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script>
+        // System variables & defaults
+        document.getElementById('date').valueAsDate = new Date();
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const moodEmojis = { 5: "😁", 4: "🙂", 3: "😐", 2: "😔", 1: "😫" };
+        
+        let moodLineChartInstance = null;
+        let habitBarChartInstance = null;
+        let moodCircleChartInstance = null;
+
+        let selectedYear = new Date().getFullYear();
+        let selectedMonth = new Date().getMonth();
+        let isLogsExpanded = false;
+
+        function populateMonthDropdown() {
+            let entries = [];
+            try { entries = JSON.parse(localStorage.getItem('moobit_entries')) || []; } catch(e) { entries = []; }
+            
+            const dropdownLog = document.getElementById('monthSelector');
+            const dropdownChart = document.getElementById('chartMonthSelector');
+            const dropdownCalendar = document.getElementById('calendarMonthSelector');
+            
+            dropdownLog.innerHTML = '';
+            dropdownChart.innerHTML = '';
+            dropdownCalendar.innerHTML = '';
+            
+            let yearMonths = new Set();
+            const currentYM = `${new Date().getFullYear()}-${String(new Date().getMonth()).padStart(2, '0')}`;
+            yearMonths.add(currentYM);
+            
+            entries.forEach(entry => {
+                const parts = entry.date.split('-'); 
+                if (parts.length === 3) {
+                    const yyyy = parts[0];
+                    const mm = String(parseInt(parts[1]) - 1).padStart(2, '0');
+                    yearMonths.add(`${yyyy}-${mm}`);
+                }
+            });
+
+            let sortedYM = Array.from(yearMonths).sort().reverse();
+            
+            sortedYM.forEach(ym => {
+                const [yyyy, mm] = ym.split('-');
+                const textContent = `${monthNames[parseInt(mm)]} ${yyyy}`;
+                
+                const optionLog = document.createElement('option');
+                optionLog.value = ym; optionLog.textContent = textContent;
+                
+                const optionChart = document.createElement('option');
+                optionChart.value = ym; optionChart.textContent = textContent;
+                
+                const optionCalendar = document.createElement('option');
+                optionCalendar.value = ym; optionCalendar.textContent = textContent;
+                
+                if (parseInt(yyyy) === selectedYear && parseInt(mm) === selectedMonth) {
+                    optionLog.selected = true; 
+                    optionChart.selected = true;
+                    optionCalendar.selected = true;
+                }
+                
+                dropdownLog.appendChild(optionLog);
+                dropdownChart.appendChild(optionChart);
+                dropdownCalendar.appendChild(optionCalendar);
+            });
+        }
+
+        window.syncMonths = function(source) {
+            let selectedValue;
+            if (source === 'chart') {
+                selectedValue = document.getElementById('chartMonthSelector').value;
+            } else if (source === 'log') {
+                selectedValue = document.getElementById('monthSelector').value;
+            } else if (source === 'calendar') {
+                selectedValue = document.getElementById('calendarMonthSelector').value;
+            }
+
+            document.getElementById('chartMonthSelector').value = selectedValue;
+            document.getElementById('monthSelector').value = selectedValue;
+            document.getElementById('calendarMonthSelector').value = selectedValue;
+
+            const [yyyy, mm] = selectedValue.split('-');
+            selectedYear = parseInt(yyyy);
+            selectedMonth = parseInt(mm);
+            isLogsExpanded = false; 
+            
+            updateDashboard();
+        }
+
+        function renderHabits() {
+            const grid = document.getElementById('habitsGrid');
+            grid.innerHTML = '';
+            
+            let storedHabits = localStorage.getItem('moobit_custom_habits');
+            let habits = storedHabits ? JSON.parse(storedHabits) : ['Workout', 'Coding', 'Reading'];
+            if (!storedHabits) localStorage.setItem('moobit_custom_habits', JSON.stringify(habits));
+
+            habits.forEach((habit, index) => {
+                const div = document.createElement('div');
+                div.className = 'habit-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="habit_${index}" value="${habit}">
+                    <label for="habit_${index}">${habit}</label>
+                    <button type="button" class="del-habit-btn" onclick="deleteCustomHabit('${habit}')">&times;</button>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        window.addCustomHabit = function() {
+            const input = document.getElementById('newHabitInput');
+            const newHabit = input.value.trim();
+            if (newHabit) {
+                let habits = JSON.parse(localStorage.getItem('moobit_custom_habits')) || [];
+                if (!habits.some(h => h.toLowerCase() === newHabit.toLowerCase())) {
+                    habits.push(newHabit);
+                    localStorage.setItem('moobit_custom_habits', JSON.stringify(habits));
+                    renderHabits();
+                    updateDashboard();
+                } else { alert("Habit exists!"); }
+                input.value = '';
+            }
+        };
+
+        window.deleteCustomHabit = function(habitToDelete) {
+            if (confirm(`Delete habit tracking profile for '${habitToDelete}'?`)) {
+                let habits = JSON.parse(localStorage.getItem('moobit_custom_habits')) || [];
+                habits = habits.filter(h => h !== habitToDelete);
+                localStorage.setItem('moobit_custom_habits', JSON.stringify(habits));
+                renderHabits();
+                updateDashboard();
+            }
+        };
+
+        function buildCharts(monthlyEntries) {
+            if(moodLineChartInstance) moodLineChartInstance.destroy();
+            if(habitBarChartInstance) habitBarChartInstance.destroy();
+            if(moodCircleChartInstance) moodCircleChartInstance.destroy();
+
+            const chronologicalEntries = [...monthlyEntries].sort((a,b) => new Date(a.date) - new Date(b.date));
+            const lineLabels = chronologicalEntries.map(e => {
+                const parts = e.date.split('-'); return parts[2] ? parts[2] : e.date; 
+            });
+            const lineData = chronologicalEntries.map(e => e.mood);
+
+            let masterHabits = JSON.parse(localStorage.getItem('moobit_custom_habits')) || ['Workout', 'Coding', 'Reading'];
+            const habitCounts = {};
+            masterHabits.forEach(h => habitCounts[h] = 0);
+            monthlyEntries.forEach(entry => {
+                if (entry.habits) {
+                    entry.habits.forEach(h => { if (habitCounts[h] !== undefined) habitCounts[h]++; });
+                }
+            });
+
+            const moodCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+            monthlyEntries.forEach(e => moodCounts[e.mood]++);
+
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.font.size = 12;
+
+            const ctxLine = document.getElementById('moodLineChart').getContext('2d');
+            moodLineChartInstance = new Chart(ctxLine, {
+                type: 'line', data: { labels: lineLabels, datasets: [{
+                    data: lineData, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                    borderWidth: 2, tension: 0.15, fill: true, pointRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: {size: 11} } }, y: { min: 1, max: 5, ticks: { stepSize: 1, callback: function(value) { return moodEmojis[value]; } } } } }
+            });
+
+            const ctxBar = document.getElementById('habitBarChart').getContext('2d');
+            habitBarChartInstance = new Chart(ctxBar, {
+                type: 'bar', data: { labels: Object.keys(habitCounts), datasets: [{
+                    data: Object.values(habitCounts), backgroundColor: '#10b981', borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: {size: 11} } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            const ctxCircle = document.getElementById('moodCircleChart').getContext('2d');
+            moodCircleChartInstance = new Chart(ctxCircle, {
+                type: 'doughnut', data: { labels: ['😁', '🙂', '😐', '😔', '😫'], datasets: [{
+                    data: [moodCounts[5], moodCounts[4], moodCounts[3], moodCounts[2], moodCounts[1]],
+                    backgroundColor: ['#10b981', '#60a5fa', '#94a3b8', '#f59e0b', '#ef4444'], borderWidth: 1 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 14, padding: 12, font: {size: 12} } } } }
+            });
+        }
+
+        function buildCalendar(monthlyEntries) {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach(d => {
+                const div = document.createElement('div');
+                div.className = 'calendar-day-header';
+                div.innerText = d;
+                grid.appendChild(div);
+            });
+
+            const firstDay = new Date(selectedYear, selectedMonth, 1).getDay();
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            
+            const loggedDates = new Set();
+            monthlyEntries.forEach(e => loggedDates.add(e.date));
+
+            for (let i = 0; i < firstDay; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'calendar-day empty';
+                grid.appendChild(blank);
+            }
+
+            const today = new Date();
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                dayDiv.innerText = i;
+
+                const checkDateString = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                if (loggedDates.has(checkDateString)) {
+                    dayDiv.classList.add('logged');
+                }
+
+                if (today.getFullYear() === selectedYear && today.getMonth() === selectedMonth && today.getDate() === i) {
+                    dayDiv.style.border = '2px solid #4f46e5';
+                }
+
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        function buildHeatmap(entries) {
+            const heatmapGrid = document.getElementById('heatmapGrid');
+            heatmapGrid.innerHTML = '';
+            document.getElementById('heatmapYearLabel').innerText = selectedYear;
+
+            const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+            days.forEach(d => {
+                const label = document.createElement('div');
+                label.innerText = d;
+                label.className = 'calendar-day-header'; 
+                heatmapGrid.appendChild(label);
+            });
+
+            const yearEntries = entries.filter(e => e.date.startsWith(selectedYear.toString()));
+            const moodMap = {};
+            yearEntries.forEach(e => moodMap[e.date] = e.mood);
+
+            const startDate = new Date(selectedYear, 0, 1);
+            const endDate = new Date(selectedYear, 11, 31);
+            
+            const startDayOfWeek = startDate.getDay();
+            
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'heatmap-cell empty';
+                heatmapGrid.appendChild(empty);
+            }
+
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const yyyy = currentDate.getFullYear();
+                const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(currentDate.getDate()).padStart(2, '0');
+                const dateString = `${yyyy}-${mm}-${dd}`;
+                
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                
+                if (moodMap[dateString]) {
+                    cell.setAttribute('data-mood', moodMap[dateString]);
+                    cell.title = `${dateString} | Mood: ${moodEmojis[moodMap[dateString]]}`;
+                } else {
+                    cell.title = `${dateString} | No Entry`;
+                }
+                
+                heatmapGrid.appendChild(cell);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+
+        document.getElementById('moobitForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('date').value;
+            const mood = parseInt(document.getElementById('mood').value);
+            const notes = document.getElementById('notes').value;
+            
+            const habits = [];
+            document.querySelectorAll('#habitsGrid input[type="checkbox"]:checked').forEach(cb => {
+                habits.push(cb.value);
+            });
+
+            const entry = { date, mood, habits, notes };
+            let entries = [];
+            try { entries = JSON.parse(localStorage.getItem('moobit_entries')) || []; } catch(e) { entries = []; }
+            
+            const existingIndex = entries.findIndex(e => e.date === date);
+            if(existingIndex >= 0) {
+                entries[existingIndex] = entry;
+            } else {
+                entries.push(entry);
+            }
+            
+            entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem('moobit_entries', JSON.stringify(entries));
+            
+            document.getElementById('notes').value = '';
+            document.querySelectorAll('#habitsGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
+            
+            populateMonthDropdown();
+            updateDashboard();
+        });
+
+        window.deleteEntry = function(dateToDelete) {
+            if (confirm(`Permanently drop record log: ${dateToDelete}?`)) {
+                let entries = [];
+                try { entries = JSON.parse(localStorage.getItem('moobit_entries')) || []; } catch(e) { entries = []; }
+                entries = entries.filter(entry => entry.date !== dateToDelete);
+                localStorage.setItem('moobit_entries', JSON.stringify(entries));
+                populateMonthDropdown();
+                updateDashboard();
+            }
+        };
+
+        window.toggleLogs = function() {
+            isLogsExpanded = !isLogsExpanded;
+            updateDashboard(); 
+        };
+
+        function updateDashboard() {
+            let entries = [];
+            try { entries = JSON.parse(localStorage.getItem('moobit_entries')) || []; } catch(e) { entries = []; }
+            
+            const monthlyEntries = entries.filter(entry => {
+                const parts = entry.date.split('-');
+                const entryYear = parseInt(parts[0]);
+                const entryMonth = parseInt(parts[1]) - 1; 
+                return entryMonth === selectedMonth && entryYear === selectedYear;
+            });
+
+            const tbody = document.getElementById('entriesTableBody');
+            tbody.innerHTML = '';
+            let totalMood = 0;
+
+            if (monthlyEntries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding: 22px 0;">No logs found for this month.</td></tr>';
+            } else {
+                monthlyEntries.forEach((entry, index) => {
+                    totalMood += entry.mood;
+                    const row = document.createElement('tr');
+                    
+                    if (index >= 3 && !isLogsExpanded) { row.style.display = 'none'; }
+
+                    row.innerHTML = `
+                        <td style="font-weight:bold;">${entry.date}</td>
+                        <td>${moodEmojis[entry.mood]}</td>
+                        <td>${entry.habits.join(', ') || '-'}</td>
+                        <td style="color:#475569;">${entry.notes || '-'}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteEntry('${entry.date}')">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            document.getElementById('currentMonthLabel').innerText = `${monthNames[selectedMonth].substring(0,3)} ${selectedYear}`;
+
+            const expandContainer = document.getElementById('expandLogsContainer');
+            const expandBtn = document.getElementById('expandLogsBtn');
+
+            if (monthlyEntries.length > 3) {
+                expandContainer.style.display = 'block';
+                if (isLogsExpanded) {
+                    expandBtn.innerHTML = 'Collapse Records ▲';
+                } else {
+                    const hiddenCount = monthlyEntries.length - 3;
+                    expandBtn.innerHTML = `Show ${hiddenCount} More Record${hiddenCount > 1 ? 's' : ''} ▼`;
+                }
+            } else {
+                expandContainer.style.display = 'none';
+            }
+
+            document.getElementById('totalDaysStat').innerText = monthlyEntries.length;
+            if (monthlyEntries.length > 0) {
+                const avg = Math.round(totalMood / monthlyEntries.length);
+                document.getElementById('avgMoodStat').innerText = moodEmojis[avg];
+            } else {
+                document.getElementById('avgMoodStat').innerText = "-";
+            }
+
+            buildCharts(monthlyEntries);
+            buildCalendar(monthlyEntries);
+            buildHeatmap(entries);
+        }
+
+        renderHabits();
+        populateMonthDropdown();
+        updateDashboard();
+        
+        document.getElementById('newHabitInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomHabit();
+            }
+        });
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered! Scope:', reg.scope))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
