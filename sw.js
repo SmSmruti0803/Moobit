@@ -1,10 +1,10 @@
-const CACHE_NAME = 'moobit-cache-v1';
+const CACHE_NAME = 'moobit-cache-v2';
 const assetsToCache = [
-  '/moobit/',
-  '/moobit/index.html',
-  '/moobit/manifest.json',
-  '/moobit/icon-192.png',
-  '/moobit/icon-512.png',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 
@@ -14,6 +14,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll(assetsToCache);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -28,6 +29,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
