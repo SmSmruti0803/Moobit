@@ -256,12 +256,100 @@
             margin-bottom: 14px;
         }
         .heatmap-legend .heatmap-cell { width: 12px; height: 12px; border-radius: 3px; aspect-ratio: unset; }
+
+        /* --- PWA INSTALL POPUP BANNER STYLING --- */
+        #installPopup {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(150px);
+            background: #ffffff;
+            color: #1e293b;
+            padding: 16px 24px;
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #e2e8f0;
+            max-width: 420px;
+            width: calc(100% - 48px);
+            box-sizing: border-box;
+        }
+        #installPopup.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .install-popup-icon {
+            font-size: 2.2rem;
+            background: #e0e7ff;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .install-popup-content {
+            flex-grow: 1;
+        }
+        .install-popup-content h4 {
+            margin: 0 0 4px 0;
+            font-size: 1rem;
+            color: var(--primary);
+        }
+        .install-popup-content p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .install-popup-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .install-popup-actions button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            white-space: nowrap;
+        }
+        #installBtn {
+            background-color: var(--primary);
+            color: white;
+        }
+        #installBtn:hover {
+            background-color: #4338ca;
+        }
+        #closePopupBtn {
+            background-color: transparent;
+            color: #64748b;
+        }
+        #closePopupBtn:hover {
+            color: #1e293b;
+        }
     </style>
 </head>
 <body>
 
     <h1>Moobit 🌒</h1>
     <p class="subtitle">Track your daily habits and monthly mood</p>
+
+    <!-- PWA Installation Popup Modal -->
+    <div id="installPopup">
+        <div class="install-popup-icon">🌒</div>
+        <div class="install-popup-content">
+            <h4>Install Moobit</h4>
+            <p>Add to your home screen for fast, offline habit & mood tracking!</p>
+        </div>
+        <div class="install-popup-actions">
+            <button id="installBtn">Install</button>
+            <button id="closePopupBtn">Later</button>
+        </div>
+    </div>
 
     <div class="dashboard-layout">
         
@@ -836,6 +924,41 @@
                 e.preventDefault();
                 addCustomHabit();
             }
+        });
+
+        // --- PWA INSTALL POPUP LOGIC ---
+        let deferredPrompt;
+        const installPopup = document.getElementById('installPopup');
+        const installBtn = document.getElementById('installBtn');
+        const closePopupBtn = document.getElementById('closePopupBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the browser's default mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            
+            // Show our custom popup banner smoothly after 1.5 seconds
+            setTimeout(() => {
+                installPopup.classList.add('show');
+            }, 1500);
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                // Show the native browser installation prompt
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                deferredPrompt = null;
+            }
+            installPopup.classList.remove('show');
+        });
+
+        closePopupBtn.addEventListener('click', () => {
+            installPopup.classList.remove('show');
         });
 
         // Register Service Worker for GitHub Pages PWA with scope
