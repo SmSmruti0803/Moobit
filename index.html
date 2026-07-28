@@ -838,10 +838,10 @@
             }
         });
 
-        // Register Service Worker for PWA
+        // Register Service Worker for GitHub Pages PWA with scope
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('/moobit/sw.js', { scope: '/moobit/' })
                     .then(reg => console.log('Service Worker registered! Scope:', reg.scope))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
