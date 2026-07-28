@@ -257,7 +257,7 @@
         }
         .heatmap-legend .heatmap-cell { width: 12px; height: 12px; border-radius: 3px; aspect-ratio: unset; }
 
-        /* --- PWA INSTALL POPUP BANNER STYLING --- */
+        /* --- PWA INSTALL POPUP BANNER & MANUAL BUTTON STYLING --- */
         #installPopup {
             position: fixed;
             bottom: 24px;
@@ -331,12 +331,40 @@
         #closePopupBtn:hover {
             color: #1e293b;
         }
+        
+        /* Persistent Header Install Button */
+        .top-install-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #manualInstallBtn {
+            background-color: #e0e7ff;
+            color: var(--primary);
+            border: 1px solid #c7d2fe;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        #manualInstallBtn:hover {
+            background-color: #c7d2fe;
+        }
     </style>
 </head>
 <body>
 
     <h1>Moobit 🌒</h1>
     <p class="subtitle">Track your daily habits and monthly mood</p>
+
+    <!-- Permanent Install Button (Visible Always for Convenience) -->
+    <div class="top-install-container" id="manualInstallContainer" style="display: none;">
+        <button id="manualInstallBtn">📥 Install Moobit App</button>
+    </div>
 
     <!-- PWA Installation Popup Modal -->
     <div id="installPopup">
@@ -926,45 +954,52 @@
             }
         });
 
-        // --- PWA INSTALL POPUP LOGIC ---
+        // --- PWA INSTALL POPUP & PERSISTENT BUTTON LOGIC ---
         let deferredPrompt;
         const installPopup = document.getElementById('installPopup');
         const installBtn = document.getElementById('installBtn');
         const closePopupBtn = document.getElementById('closePopupBtn');
+        const manualInstallContainer = document.getElementById('manualInstallContainer');
+        const manualInstallBtn = document.getElementById('manualInstallBtn');
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent the browser's default mini-infobar from appearing on mobile
             e.preventDefault();
-            // Stash the event so it can be triggered later
             deferredPrompt = e;
             
-            // Show our custom popup banner smoothly after 1.5 seconds
+            // Show popup banner after 1.5 seconds
             setTimeout(() => {
                 installPopup.classList.add('show');
             }, 1500);
+
+            // Also show the persistent header button
+            manualInstallContainer.style.display = 'block';
         });
 
-        installBtn.addEventListener('click', async () => {
+        const triggerInstall = async () => {
             if (deferredPrompt) {
-                // Show the native browser installation prompt
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     console.log('User accepted the install prompt');
                 }
                 deferredPrompt = null;
+            } else {
+                alert('To install Moobit, tap your browser menu (three dots or share icon) and select "Add to Home Screen" or "Install App".');
             }
             installPopup.classList.remove('show');
-        });
+        };
+
+        installBtn.addEventListener('click', triggerInstall);
+        manualInstallBtn.addEventListener('click', triggerInstall);
 
         closePopupBtn.addEventListener('click', () => {
             installPopup.classList.remove('show');
         });
 
-        // Register Service Worker for GitHub Pages PWA with scope
+        // Register Service Worker using relative paths for robust GitHub compatibility
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/moobit/sw.js', { scope: '/moobit/' })
+                navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('Service Worker registered! Scope:', reg.scope))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
