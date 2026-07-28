@@ -933,8 +933,12 @@
         const closePopupBtn = document.getElementById('closePopupBtn');
 
         window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the browser's default mini-infobar from appearing on mobile
             e.preventDefault();
+            // Stash the event so it can be triggered later
             deferredPrompt = e;
+            
+            // Show our custom popup banner smoothly after 1.5 seconds
             setTimeout(() => {
                 installPopup.classList.add('show');
             }, 1500);
@@ -942,6 +946,7 @@
 
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
+                // Show the native browser installation prompt
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
@@ -956,10 +961,10 @@
             installPopup.classList.remove('show');
         });
 
-        // Register Service Worker using relative paths for robust GitHub compatibility
+        // Register Service Worker for GitHub Pages PWA with scope
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                navigator.serviceWorker.register('/moobit/sw.js', { scope: '/moobit/' })
                     .then(reg => console.log('Service Worker registered! Scope:', reg.scope))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
