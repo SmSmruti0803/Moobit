@@ -1,7 +1,10 @@
 const CACHE_NAME = 'moobit-cache-v1';
 const assetsToCache = [
-  './',
-  './index.html',
+  '/moobit/',
+  '/moobit/index.html',
+  '/moobit/manifest.json',
+  '/moobit/icon-192.png',
+  '/moobit/icon-512.png',
   'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 
